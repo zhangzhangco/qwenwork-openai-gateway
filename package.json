@@ -1,0 +1,30 @@
+{
+  "name": "qwenwork-openai-gateway",
+  "version": "0.2.0",
+  "type": "module",
+  "description": "把千问办公（QwenWork CN）的模型调用能力包装成标准 OpenAI 兼容 API",
+  "license": "MIT",
+  "author": "zhangzhangco",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zhangzhangco/qwenwork-openai-gateway.git"
+  },
+  "homepage": "https://github.com/zhangzhangco/qwenwork-openai-gateway#readme",
+  "keywords": [
+    "openai",
+    "openai-compatible",
+    "qwenwork",
+    "qwen",
+    "gateway",
+    "proxy",
+    "llm"
+  ],
+  "main": "server.mjs",
+  "scripts": {
+    "start": "node server.mjs",
+    "doctor": "node scripts/doctor.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
