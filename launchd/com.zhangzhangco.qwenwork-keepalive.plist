@@ -20,6 +20,7 @@
     <array>
         <string>__NODE__</string>
         <string>scripts/keepalive.mjs</string>
+        <string>--ping</string>
     </array>
 
     <key>WorkingDirectory</key>

@@ -128,30 +128,37 @@ print(resp.choices[0].message.content)
 
 ## 凭证保活（keepalive）
 
-`accessKey` 按会话签发，**只有会话有活动桌面端才会续期**。客户端开着但两小时没人说话，
-key 过期后网关就会回 `503 no_live_route`，直到你去千问办公界面里说句话触发新签发。
+`accessKey` 按会话签发（TTL 约 2 小时），桌面端**只在引擎请求前才续期**。客户端开着但
+两小时没人说话，key 过期后网关就会回 `503 no_live_route`。实测直接打 MaaS 聊天接口
+**不会**触发桌面端续期——但 MaaS 有一个官方轮换接口（宿主同款）：
 
-`scripts/keepalive.mjs` 把这个手动动作自动化：定期用当前 accessKey 向 MaaS 发一个
-**1 token 的最小请求**（默认 `lite` 模型，成本几乎为零），让上游会话保持活跃、桌面端持续续期。
-key 只在内存里用，不落盘不打印。若 key 已全部过期且客户端没在运行，它会后台拉起客户端
-（`open -ga`，不抢焦点）等待重新签发。
+```
+POST {base}/v1/access-tokens/exchange   (Bearer 旧key, body {"ttl_ms": 7200000})
+→ 201 { access_token: 新key, expires_at: 新的过期时间 }
+```
+
+旧 key 在自然过期前仍然有效（平滑轮换）。`scripts/keepalive.mjs` 利用这个接口定期
+把 key 轮换续满，写入网关自己的私有缓存（`~/.qwenworkcn/gateway-keepalive-key.json`，0600）；
+网关选 key 时会同时看宿主凭证文件和这份缓存，取剩余有效期最长的一把。
+**从此续期不再依赖桌面端的会话活动**，甚至宿主凭证文件丢失/钥匙串被锁时也能靠缓存继续工作。
 
 ```bash
-npm run keepalive            # 手动跑一次（可加 -- --model lite --verbose）
-npm run keepalive:install    # 安装 LaunchAgent：每 90 分钟自动跑，开机自启（macOS）
+npm run keepalive            # 手动轮换一次（可加 -- --ping --verbose）
+npm run keepalive:install    # 安装 LaunchAgent：每 90 分钟自动轮换，开机自启（macOS）
 npm run keepalive:uninstall  # 卸载
 ```
 
-日志：`~/Library/Logs/qwenwork-keepalive.log`。退出码：`0`=ping 成功；`2`=无活 key（客户端在运行，等它续期）；
+日志：`~/Library/Logs/qwenwork-keepalive.log`。退出码：`0`=轮换成功；`2`=无活 key（客户端在运行，等它 mint）；
 `3`=无活 key（已尝试拉起客户端）；`1`=其他错误。
 
 | 变量 | 默认 | 说明 |
 |---|---|---|
-| `KEEPALIVE_MODEL` | `lite` | ping 用的模型（也可 `--model` 指定） |
-| `KEEPALIVE_TIMEOUT_MS` | `30000` | 单次 ping 超时 |
+| `KEEPALIVE_MODEL` | `lite` | `--ping` 验证用的模型 |
+| `KEEPALIVE_TIMEOUT_MS` | `30000` | 单次请求超时 |
+| `QWENWORK_KEEPALIVE_CACHE` | `~/.qwenworkcn/gateway-keepalive-key.json` | 轮换缓存路径（网关与脚本共用） |
 | `QWENWORK_APP_NAME` | `QwenWorkCN` | 兜底拉起的客户端进程名 |
 
-> **睡眠场景**：launchd 的间隔任务在 Mac 睡眠期间不跑。合盖过夜后若 key 已过期，
+> **睡眠场景**：launchd 的间隔任务在 Mac 睡眠期间不跑。合盖过夜后若所有 key 已过期，
 > 醒来后的第一轮 keepalive 会拉起客户端补签发，客户端侧最多短暂 503 后自愈。
 > 非 macOS 可以用 cron / systemd timer 调 `node scripts/keepalive.mjs`（去掉兜底拉起逻辑即可）。
 
@@ -163,6 +170,9 @@ npm run keepalive:uninstall  # 卸载
   用来解出你自己账号的 `accessKey`。
 - 解出的密钥**只存在于进程内存**，不写盘、不打印、不上传到任何第三方服务；
   它只会随请求发往千问办公官方的 MaaS 网关（`https://api9.qwenwork.cn/v1`）。
+  唯一例外是可选的[凭证保活](#凭证保活keepalive)：它把轮换出的 key 写在
+  `~/.qwenworkcn/gateway-keepalive-key.json`（0600，与宿主凭证同目录同权限级别），
+  不装保活就没有这个文件。
 - 网关本身不新增任何对外通道；默认只监听 `127.0.0.1`。
   如果要对外暴露，务必设置 `GATEWAY_API_KEY`，并自行承担网络暴露风险。
 - 网关会使用你账号的额度，所有请求都算在你的千问办公账号上。
@@ -180,6 +190,7 @@ npm run keepalive:uninstall  # 卸载
 | `QWENWORK_PROXY_TOKEN` | 空 | 上游 `Authorization: Bearer` 的值 |
 | `QWENWORK_KEYCHAIN_SERVICE` | `QwenWorkCN Safe Storage` | 存 safeStorage 密码的钥匙串服务名 |
 | `QWENWORK_CREDENTIAL_FILE` | `~/.qwenworkcn/engine-maas-key.dat` | 宿主凭证文件路径 |
+| `QWENWORK_KEEPALIVE_CACHE` | `~/.qwenworkcn/gateway-keepalive-key.json` | keepalive 轮换缓存（存在即参与选 key） |
 | `QWENWORK_MODELS_FILE` | `config/models.json` | 自定义模型注册表 |
 | `ROUTE_TTL_MS` | `8000` | 通道缓存时长 |
 | `CREDENTIAL_TTL_MS` | `30000` | 凭证重读间隔（桌面端会持续续期） |
@@ -203,9 +214,10 @@ npm run keepalive:uninstall  # 卸载
 
 ## 已知限制
 
-1. **凭证依赖桌面端续期**：`accessKey` 由千问办公桌面端签发并续期（TTL 约 2 小时），
-   且**只在会话有活动时续期**。桌面端长期不运行或长期无会话活动 → 凭证过期 →
-   网关降级为宿主代理模式 → 空闲时回 `503`。用[凭证保活](#凭证保活keepalive)可避免后者；
+1. **凭证依赖桌面端续期**：`accessKey` 由千问办公桌面端签发（TTL 约 2 小时），
+   且只在引擎请求前续期。桌面端长期不运行或长期无会话活动 → 凭证过期 →
+   网关降级为宿主代理模式 → 空闲时回 `503`。装[凭证保活](#凭证保活keepalive)后
+   由网关自己轮换续期，不再依赖桌面端活动；
    `/health` 里的 `credential.remaining_min` 会显示剩余有效期。
 2. **降级模式受 turn 限制**：只有走宿主进程内代理时，才需要桌面端有活跃 turn（否则 409 → 网关转 503）。
    正常情况下走的是直连模式，没有这个限制。
@@ -227,7 +239,7 @@ qwenwork-openai-gateway/
 ├── lib/registry.mjs           # 模型注册表
 ├── config/models.json         # 模型清单
 ├── scripts/doctor.mjs         # 环境自检
-├── scripts/keepalive.mjs      # 凭证保活 ping（防 accessKey 过期）
+├── scripts/keepalive.mjs      # 凭证保活：exchange 轮换续期（防 accessKey 过期）
 ├── scripts/install-keepalive.sh # 保活 LaunchAgent 安装/卸载
 ├── launchd/                   # macOS LaunchAgent 模板
 ├── MECHANISM.md               # 千问办公模型调用机制（逆向结论 + 证据）
