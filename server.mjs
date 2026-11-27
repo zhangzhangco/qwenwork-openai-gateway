@@ -290,6 +290,9 @@ const server = http.createServer(async (req, res) => {
 
   try {
     if (req.method === "GET" && (p === "/v1/models" || p === "/models")) {
+      if (url.searchParams.get("verbose") === "1") {
+        return sendJSON(res, 200, { object: "list", data: loadRegistry() });
+      }
       return sendJSON(res, 200, toOpenAIList());
     }
     if (req.method === "GET" && (p === "/health" || p === "/")) {

@@ -1,21 +1,22 @@
 {
   "_comment": "模型注册表。id 为对客户端暴露的 OpenAI model 名，实际透传给千问办公 MaaS 网关。verified=true 表示已直连 MaaS 网关实测返回 200。",
   "_verified_at": "2026-11-26 直连 https://api9.qwenwork.cn/v1 实测，15/15 全部通过（非流式 + 流式 + function calling）",
+  "_limits_source": "2026-11-28 从千问办公客户端本地 agents.db(sub_chats.ext) 提取服务端下发的 modelRuntimeLimits：qwen4-max/qwen3.8-max-preview/pro/glm-5.4/glm-5.3/deepseek-flash 均为 contextWindow=1000000, maxOutputTokens=32768。其余模型暂无下发记录，保留原值。",
   "models": [
-    { "id": "qwen4-max", "display_name": "Qwen4-Max", "verified": true, "reasoning": true, "vision": false, "context": 262144 },
-    { "id": "qwen3.8-max-preview", "display_name": "Qwen3.8-Max-Preview", "verified": true, "reasoning": true, "vision": false, "context": 262144 },
-    { "id": "qwen3.8-flash", "display_name": "Qwen3.8-Flash", "verified": true, "reasoning": false, "vision": false, "context": 262144 },
-    { "id": "glm-5.4", "display_name": "GLM-5.4", "verified": true, "reasoning": true, "vision": false, "context": 200000 },
-    { "id": "glm-5.3", "display_name": "GLM-5.3", "verified": true, "reasoning": true, "vision": false, "context": 200000 },
-    { "id": "glm-5.3-flash", "display_name": "GLM-5.3-Flash", "verified": true, "reasoning": false, "vision": false, "context": 200000 },
-    { "id": "kimi-k3.1-pro", "display_name": "Kimi-K3.1-Pro", "verified": true, "reasoning": true, "vision": false, "context": 262144 },
-    { "id": "deepseek-v4-pro", "display_name": "DeepSeek-V4-Pro", "verified": true, "reasoning": true, "vision": false, "context": 131072 },
-    { "id": "deepseek-flash", "display_name": "DeepSeek-Flash", "verified": true, "reasoning": false, "vision": false, "context": 131072 },
-    { "id": "minimax-m3.1-flash", "display_name": "minimax-M3.1-Flash", "verified": true, "reasoning": true, "vision": true, "context": 1000000 },
-    { "id": "step-5-preview", "display_name": "Step-5-Preview", "verified": true, "reasoning": true, "vision": false, "context": 131072 },
-    { "id": "ling-3.1-flash", "display_name": "Ling-3.1-Flash", "verified": true, "reasoning": false, "vision": false, "context": 131072 },
-    { "id": "flash", "display_name": "Flash(标准)", "verified": true, "reasoning": false, "vision": false, "context": 131072 },
-    { "id": "pro", "display_name": "Pro(高级)", "verified": true, "reasoning": true, "vision": false, "context": 262144 },
-    { "id": "lite", "display_name": "Lite(轻量/小模型)", "verified": true, "reasoning": false, "vision": false, "context": 32768 }
+    { "id": "qwen4-max", "display_name": "Qwen4-Max", "verified": true, "reasoning": true, "vision": false, "context": 1000000, "max_output": 32768 },
+    { "id": "qwen3.8-max-preview", "display_name": "Qwen3.8-Max-Preview", "verified": true, "reasoning": true, "vision": false, "context": 1000000, "max_output": 32768 },
+    { "id": "qwen3.8-flash", "display_name": "Qwen3.8-Flash", "verified": true, "reasoning": false, "vision": false, "context": 262144, "max_output": 32768 },
+    { "id": "glm-5.4", "display_name": "GLM-5.4", "verified": true, "reasoning": true, "vision": false, "context": 1000000, "max_output": 32768 },
+    { "id": "glm-5.3", "display_name": "GLM-5.3", "verified": true, "reasoning": true, "vision": false, "context": 1000000, "max_output": 32768 },
+    { "id": "glm-5.3-flash", "display_name": "GLM-5.3-Flash", "verified": true, "reasoning": false, "vision": false, "context": 200000, "max_output": 32768 },
+    { "id": "kimi-k3.1-pro", "display_name": "Kimi-K3.1-Pro", "verified": true, "reasoning": true, "vision": false, "context": 262144, "max_output": 32768 },
+    { "id": "deepseek-v4-pro", "display_name": "DeepSeek-V4-Pro", "verified": true, "reasoning": true, "vision": false, "context": 131072, "max_output": 32768 },
+    { "id": "deepseek-flash", "display_name": "DeepSeek-Flash", "verified": true, "reasoning": false, "vision": false, "context": 1000000, "max_output": 32768 },
+    { "id": "minimax-m3.1-flash", "display_name": "minimax-M3.1-Flash", "verified": true, "reasoning": true, "vision": true, "context": 1000000, "max_output": 32768 },
+    { "id": "step-5-preview", "display_name": "Step-5-Preview", "verified": true, "reasoning": true, "vision": false, "context": 131072, "max_output": 32768 },
+    { "id": "ling-3.1-flash", "display_name": "Ling-3.1-Flash", "verified": true, "reasoning": false, "vision": false, "context": 131072, "max_output": 32768 },
+    { "id": "flash", "display_name": "Flash(标准)", "verified": true, "reasoning": false, "vision": false, "context": 131072, "max_output": 32768 },
+    { "id": "pro", "display_name": "Pro(高级)", "verified": true, "reasoning": true, "vision": false, "context": 1000000, "max_output": 32768 },
+    { "id": "lite", "display_name": "Lite(轻量/小模型)", "verified": true, "reasoning": false, "vision": false, "context": 32768, "max_output": 32768 }
   ]
 }
