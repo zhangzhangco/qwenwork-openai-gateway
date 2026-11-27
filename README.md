@@ -28,6 +28,8 @@ Qwen / GLM / Kimi / DeepSeek / MiniMax / Step ...
 - **不受「宿主活跃 turn」限制** —— 不经过桌面端进程内那个 turn 作用域的模型代理，桌面端空闲也能调；
 - 额度、并发、模型可用性完全跟随你的千问办公账号；
 - `accessKey` 有 TTL（通常 2 小时），由桌面端续期后落盘，网关每 30 秒重读一次；
+  **续期只在会话有活动时发生**——客户端光开着、长时间不说话，key 照样过期。
+  用内置的[凭证保活](#凭证保活keepalive)可以免掉手动激活；
 - 万一凭证不可用（钥匙串被锁 / 文件缺失），网关**自动降级**为走宿主进程内代理；
 - 也可以用 `QWENWORK_PROXY_BASE_URL` / `QWENWORK_PROXY_TOKEN` 指向任意 OpenAI 兼容上游（自有 MaaS key、自建代理等），优先级最高。
 
@@ -124,6 +126,37 @@ print(resp.choices[0].message.content)
 
 ---
 
+## 凭证保活（keepalive）
+
+`accessKey` 按会话签发，**只有会话有活动桌面端才会续期**。客户端开着但两小时没人说话，
+key 过期后网关就会回 `503 no_live_route`，直到你去千问办公界面里说句话触发新签发。
+
+`scripts/keepalive.mjs` 把这个手动动作自动化：定期用当前 accessKey 向 MaaS 发一个
+**1 token 的最小请求**（默认 `lite` 模型，成本几乎为零），让上游会话保持活跃、桌面端持续续期。
+key 只在内存里用，不落盘不打印。若 key 已全部过期且客户端没在运行，它会后台拉起客户端
+（`open -ga`，不抢焦点）等待重新签发。
+
+```bash
+npm run keepalive            # 手动跑一次（可加 -- --model lite --verbose）
+npm run keepalive:install    # 安装 LaunchAgent：每 90 分钟自动跑，开机自启（macOS）
+npm run keepalive:uninstall  # 卸载
+```
+
+日志：`~/Library/Logs/qwenwork-keepalive.log`。退出码：`0`=ping 成功；`2`=无活 key（客户端在运行，等它续期）；
+`3`=无活 key（已尝试拉起客户端）；`1`=其他错误。
+
+| 变量 | 默认 | 说明 |
+|---|---|---|
+| `KEEPALIVE_MODEL` | `lite` | ping 用的模型（也可 `--model` 指定） |
+| `KEEPALIVE_TIMEOUT_MS` | `30000` | 单次 ping 超时 |
+| `QWENWORK_APP_NAME` | `QwenWorkCN` | 兜底拉起的客户端进程名 |
+
+> **睡眠场景**：launchd 的间隔任务在 Mac 睡眠期间不跑。合盖过夜后若 key 已过期，
+> 醒来后的第一轮 keepalive 会拉起客户端补签发，客户端侧最多短暂 503 后自愈。
+> 非 macOS 可以用 cron / systemd timer 调 `node scripts/keepalive.mjs`（去掉兜底拉起逻辑即可）。
+
+---
+
 ## 安全说明
 
 - 网关**只读**本机千问办公自己的凭证文件（`~/.qwenworkcn/engine-maas-key.dat`）和登录钥匙串里的 safeStorage 密码，
@@ -170,8 +203,9 @@ print(resp.choices[0].message.content)
 
 ## 已知限制
 
-1. **凭证依赖桌面端续期**：`accessKey` 由千问办公桌面端签发并续期（TTL 约 2 小时）。
-   桌面端长期不运行 → 凭证过期 → 网关降级为宿主代理模式 → 空闲时回 `503`。
+1. **凭证依赖桌面端续期**：`accessKey` 由千问办公桌面端签发并续期（TTL 约 2 小时），
+   且**只在会话有活动时续期**。桌面端长期不运行或长期无会话活动 → 凭证过期 →
+   网关降级为宿主代理模式 → 空闲时回 `503`。用[凭证保活](#凭证保活keepalive)可避免后者；
    `/health` 里的 `credential.remaining_min` 会显示剩余有效期。
 2. **降级模式受 turn 限制**：只有走宿主进程内代理时，才需要桌面端有活跃 turn（否则 409 → 网关转 503）。
    正常情况下走的是直连模式，没有这个限制。
@@ -193,6 +227,9 @@ qwenwork-openai-gateway/
 ├── lib/registry.mjs           # 模型注册表
 ├── config/models.json         # 模型清单
 ├── scripts/doctor.mjs         # 环境自检
+├── scripts/keepalive.mjs      # 凭证保活 ping（防 accessKey 过期）
+├── scripts/install-keepalive.sh # 保活 LaunchAgent 安装/卸载
+├── launchd/                   # macOS LaunchAgent 模板
 ├── MECHANISM.md               # 千问办公模型调用机制（逆向结论 + 证据）
 └── README.md
 ```

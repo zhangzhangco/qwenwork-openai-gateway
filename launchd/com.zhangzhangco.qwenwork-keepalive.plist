@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  凭证保活 LaunchAgent 模板（macOS）。
+  安装前把下面两处 __REPO_DIR__ 替换为仓库绝对路径，__NODE__ 替换为 node 绝对路径
+  （command -v node），然后：
+
+    cp launchd/com.zhangzhangco.qwenwork-keepalive.plist ~/Library/LaunchAgents/
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.zhangzhangco.qwenwork-keepalive.plist
+
+  每 90 分钟跑一次 scripts/keepalive.mjs（accessKey TTL 约 2 小时，留 30 分钟余量）。
+  日志：~/Library/Logs/qwenwork-keepalive.log
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.zhangzhangco.qwenwork-keepalive</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>__NODE__</string>
+        <string>scripts/keepalive.mjs</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>__REPO_DIR__</string>
+
+    <key>StartInterval</key>
+    <integer>5400</integer>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>ProcessType</key>
+    <string>Background</string>
+
+    <key>StandardOutPath</key>
+    <string>__HOME__/Library/Logs/qwenwork-keepalive.log</string>
+    <key>StandardErrorPath</key>
+    <string>__HOME__/Library/Logs/qwenwork-keepalive.log</string>
+</dict>
+</plist>

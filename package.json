@@ -22,7 +22,10 @@
   "main": "server.mjs",
   "scripts": {
     "start": "node server.mjs",
-    "doctor": "node scripts/doctor.mjs"
+    "doctor": "node scripts/doctor.mjs",
+    "keepalive": "node scripts/keepalive.mjs",
+    "keepalive:install": "bash scripts/install-keepalive.sh",
+    "keepalive:uninstall": "bash scripts/install-keepalive.sh --uninstall"
   },
   "engines": {
     "node": ">=18"
